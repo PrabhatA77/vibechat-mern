@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { passwordResetTemplate } from "./emailTemplate.js";
+import { passwordResetTemplate, welcomeEmail } from "./emailTemplate.js";
 
 export const sendEmail = async (to, subject, html) => {
   try {
@@ -18,7 +18,7 @@ export const sendEmail = async (to, subject, html) => {
     console.log("SMTP Connection verified");
 
     await transporter.sendMail({
-      from: `"SignUp-Login" <${process.env.Email_USER}>`,
+      from: `"Vibe-Chat" <${process.env.Email_USER}>`,
       to,
       subject,
       html,
@@ -49,11 +49,7 @@ export const sendWelcomeEmail = async (toEmail, name) => {
     from: `"Your App" <${process.env.SMTP_USER}>`,
     to: toEmail,
     subject: 'Welcome to Our App 🎉',
-    html: `
-      <h2>Welcome, ${name}!</h2>
-      <p>We are so happy you joined. Start exploring your account now!</p>
-      <p>The Team</p>
-    `
+    html: welcomeEmail(name),
   };
 
   await transporter.sendMail(mailOptions);
