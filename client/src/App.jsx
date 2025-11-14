@@ -1,25 +1,95 @@
-import React from 'react'
-import { Route, Routes } from 'react-router-dom'
-import HomePage from './pages/HomePage'
-import LoginPage from './pages/LoginPage'
-import ProfilePage from './pages/ProfilePage'
-import FloatingShape from './components/FloatingShape'
+import React, { useContext } from 'react';
+import { Route, Routes, Navigate } from 'react-router-dom';
+import FloatingShape from './components/FloatingShape.jsx';
+import SignUpPage from './pages/SignUpPage.jsx';
+import LoginPage from './pages/LoginPage.jsx';
+import LoadingSpinner from './components/LoadingSpinner.jsx';
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
+import EmailVerificationPage from './pages/EmailVerificationPage.jsx';
+import HomePage from './pages/HomePage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
+import { Toaster } from 'react-hot-toast';
+import { AuthContext } from './context/AuthContext';
+
+// ⭐ Protected route
+const ProtectedRoute = ({ children }) => {
+  const { authUser } = useContext(AuthContext);
+
+  if (!authUser) return <Navigate to="/login" replace />;
+  if (!authUser.isVerified) return <Navigate to="/verify-email" replace />;
+
+  return children;
+};
+
+// ⭐ Redirect already logged in users
+const RedirectAuthenticateUser = ({ children }) => {
+  const { authUser } = useContext(AuthContext);
+
+  if (authUser && authUser.isVerified) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
 
 const App = () => {
-  return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-blue-900 flex items-center justify-center relative overflow-hidden'>
-      <FloatingShape color='bg-purple-500' size='w-64 h-64' top='-5%' left='10%' delay={0}/>
-      <FloatingShape color='bg-blue-500' size='w-48 h-48' top='70%' left='80%' delay={5}/>
-      <FloatingShape color='bg-indigo-500' size='w-32 h-32' top='40%' left='-10%' delay={2}/>
-      <FloatingShape color='bg-violet-500' size='w-24 h-24' top='30%' left='60%' delay={3}/>
-      
-      <Routes>
-        <Route path='/' element={<HomePage/>}/>
-        <Route path='/login' element={<LoginPage/>}/>
-        <Route path='/profile' element={<ProfilePage/>}/>
-      </Routes>
-    </div>
-  )
-}
 
-export default App
+  return (
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-blue-900 flex items-center justify-center relative overflow-hidden">
+
+      <FloatingShape color="bg-purple-500" size="w-64 h-64" top="-5%" left="10%" delay={0} />
+      <FloatingShape color="bg-blue-500" size="w-48 h-48" top="70%" left="80%" delay={5} />
+      <FloatingShape color="bg-indigo-500" size="w-32 h-32" top="40%" left="-10%" delay={2} />
+      <FloatingShape color="bg-violet-500" size="w-24 h-24" top="30%" left="60%" delay={3} />
+
+      <Toaster />
+
+      <Routes>
+        <Route path="/" element={
+          <ProtectedRoute>
+            <HomePage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/signup" element={
+          <RedirectAuthenticateUser>
+            <SignUpPage />
+          </RedirectAuthenticateUser>
+        } />
+
+        <Route path="/login" element={
+          <RedirectAuthenticateUser>
+            <LoginPage />
+          </RedirectAuthenticateUser>
+        } />
+
+        <Route path="/verify-email" element={<EmailVerificationPage />} />
+
+        <Route path="/forgot-password" element={
+          <RedirectAuthenticateUser>
+            <ForgotPasswordPage />
+          </RedirectAuthenticateUser>
+        } />
+
+        <Route path="/reset-password" element={
+          <RedirectAuthenticateUser>
+            <ResetPasswordPage />
+          </RedirectAuthenticateUser>
+        } />
+
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      <Toaster position="top-center" />
+    </div>
+  );
+};
+
+export default App;
