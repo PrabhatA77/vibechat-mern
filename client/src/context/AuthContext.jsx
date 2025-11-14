@@ -6,17 +6,18 @@ import { io } from "socket.io-client";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 axios.defaults.baseURL = backendUrl;
-axios.defaults.withCredentials = true;  // ⭐ REQUIRED FOR COOKIES
+axios.defaults.withCredentials = true;
 
 export const AuthContext = createContext();
 
-export const AuthProvider = ({children}) => {
+export const AuthProvider = ({ children }) => {
 
     const [authUser, setAuthUser] = useState(null);
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [socket, setSocket] = useState(null);
 
-    //! check if user is authenticated (cookie automatically sent)
+    const [loading, setLoading] = useState(true);   // ⭐ FIX
+
     const checkAuth = async () => {
         try {
             const { data } = await axios.get("/api/auth/check-auth");
@@ -26,11 +27,12 @@ export const AuthProvider = ({children}) => {
                 connectSocket(data.user);
             }
         } catch (err) {
-            setAuthUser(null);
+            setAuthUser(null); // not logged in
+        } finally {
+            setLoading(false);   // ⭐ MUST SET THIS
         }
     };
 
-    //! login: token comes from cookie, no storage needed
     const login = async (state, credentials) => {
         try {
             const { data } = await axios.post(`/api/auth/${state}`, credentials);
@@ -47,10 +49,9 @@ export const AuthProvider = ({children}) => {
         }
     };
 
-    //! logout: backend clears the cookie
     const logout = async () => {
         try {
-            await axios.post("/api/auth/logout"); // backend clears cookie
+            await axios.post("/api/auth/logout");
 
             setAuthUser(null);
             setOnlineUsers([]);
@@ -60,13 +61,11 @@ export const AuthProvider = ({children}) => {
             }
 
             toast.success("Logged out successfully.");
-
         } catch (err) {
             toast.error(err.message);
         }
     };
 
-    //! update profile
     const updateProfile = async (body) => {
         try {
             const { data } = await axios.put(`/api/auth/update-profile`, body);
@@ -81,13 +80,12 @@ export const AuthProvider = ({children}) => {
         }
     };
 
-    //! connect socket
     const connectSocket = (userData) => {
         if (!userData || socket?.connected) return;
 
         const newSocket = io(backendUrl, {
             query: { userId: userData._id },
-            withCredentials: true     // ⭐ send cookies during WS connection
+            withCredentials: true
         });
 
         newSocket.connect();
@@ -98,23 +96,23 @@ export const AuthProvider = ({children}) => {
         });
     };
 
-    //! run once
     useEffect(() => {
         checkAuth();
     }, []);
 
-    const value = {
-        axios,
-        authUser,
-        onlineUsers,
-        socket,
-        login,
-        logout,
-        updateProfile
-    };
-
     return (
-        <AuthContext.Provider value={value}>
+        <AuthContext.Provider
+            value={{
+                axios,
+                authUser,
+                onlineUsers,
+                socket,
+                login,
+                logout,
+                updateProfile,
+                loading          // ⭐ EXPOSE LOADING
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );

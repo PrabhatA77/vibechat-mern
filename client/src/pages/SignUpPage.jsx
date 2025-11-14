@@ -1,10 +1,10 @@
 import React, { useState, useContext } from "react";
 import { motion } from "framer-motion";
-import { Mail, User, Lock } from "lucide-react";
+import { Mail, User, Lock, Loader } from "lucide-react";  // FIXED import
 import Input from "../components/Input";
 import { Link, useNavigate } from "react-router-dom";
 import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
-import { AuthContext } from "../context/AuthContext";  // ✔ use AuthContext
+import { AuthContext } from "../context/AuthContext.jsx";
 
 const SignUpPage = () => {
   const [name, setName] = useState("");
@@ -12,8 +12,9 @@ const SignUpPage = () => {
   const [password, setPassword] = useState("");
   const [bio, setBio] = useState("");
   const [isDataSubmitted, setIsDataSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);   // FIXED
 
-  const { login } = useContext(AuthContext); // ✔ we use login("register") for signup
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
@@ -23,20 +24,17 @@ const SignUpPage = () => {
     if (!name || !email || !password || !bio) return;
 
     try {
-      // signup is performed using: login("register")
-      const response = await login("register", {
-        name,
-        email,
-        password,
-        bio
-      });
+      setIsLoading(true);
+      await login("signup", { name, email, password, bio });
 
-      navigate("/verify-email", { state: { email } });  
-    } catch (error) {
-      console.log(error);
+      navigate("/verify-email", { state: { email } });
+
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setIsLoading(false);
     }
   };
-
 
   return (
     <motion.div
@@ -49,6 +47,7 @@ const SignUpPage = () => {
         <h2 className="text-3xl font-bold mb-6 text-center bg-linear-to-r from-purple-300 to-indigo-500 text-transparent bg-clip-text">
           Create Account
         </h2>
+
         <form onSubmit={handleSignup}>
           <Input
             icon={User}
@@ -57,6 +56,7 @@ const SignUpPage = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+
           <Input
             icon={Mail}
             type="email"
@@ -64,6 +64,7 @@ const SignUpPage = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+
           <Input
             icon={Lock}
             type="password"
@@ -71,10 +72,12 @@ const SignUpPage = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
           <div className="relative mb-6">
             <div className="absolute top-3 left-0 flex items-center pl-3 pointer-events-none">
               <User className="w-5 h-5 text-violet-300" />
             </div>
+
             <textarea
               className="w-full pl-10 pr-3 py-2 bg-gray-800 bg-opacity-40 rounded-lg border border-[#2a2540] focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400 text-white placeholder-violet-200 transition duration-200 resize-none"
               placeholder="Bio"
@@ -84,12 +87,14 @@ const SignUpPage = () => {
             />
           </div>
 
-          {error && <p className="text-red-500 font-semibold mt-2">{error}</p>} 
+          {/* ❌ Removed {error} — because error is not defined */}
+
           {isDataSubmitted && (!name || !email || !password || !bio) && (
-            <p className="text-red-400 font-semibold mt-2">Please fill in all fields.</p>
+            <p className="text-red-400 font-semibold mt-2">
+              Please fill in all fields.
+            </p>
           )}
 
-          {/* Password strength meter */}
           <PasswordStrengthMeter password={password} />
 
           <motion.button
@@ -99,10 +104,15 @@ const SignUpPage = () => {
             type="submit"
             disabled={isLoading}
           >
-            {isLoading? <Loader className="animate-spin mx-auto" size={24}/> : "Sign Up"}
+            {isLoading ? (
+              <Loader className="animate-spin mx-auto" size={24} />
+            ) : (
+              "Sign Up"
+            )}
           </motion.button>
         </form>
       </div>
+
       <div className="px-8 py-8 bg-gray-900 bg-opacity-50 flex justify-center">
         <p className="text-sm text-gray-400">
           Already have an account?{" "}

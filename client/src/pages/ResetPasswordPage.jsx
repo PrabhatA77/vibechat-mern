@@ -1,16 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { motion } from "framer-motion";
-const { axios } = useContext(AuthContext);
-
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Input from "../components/Input";
 import { Lock } from "lucide-react";
 import toast from "react-hot-toast";
 import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
+import { AuthContext } from "../context/AuthContext";  // ✅ IMPORT CONTEXT
+import { useAuthStore } from "../store/authStore";      // Make sure this is imported too
 
 const ResetPasswordPage = () => {
+
+  // ✅ Hooks must be inside the component
+  const { axios } = useContext(AuthContext);
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  
   const { resetPassword, error, isLoading, message } = useAuthStore();
 
   const [searchParams] = useSearchParams();
@@ -36,17 +41,14 @@ const ResetPasswordPage = () => {
         password,
       });
 
-      toast.success(
-        "Password reset successfully , redirecting to login page..."
-      );
-      setTimeout(() => {
-        navigate("/login");
-      });
+      toast.success("Password reset successfully, redirecting to login...");
+      setTimeout(() => navigate("/login"), 1500);
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Error resetting password");
     }
   };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -71,6 +73,7 @@ const ResetPasswordPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+
           <Input
             icon={Lock}
             type="password"
@@ -80,13 +83,12 @@ const ResetPasswordPage = () => {
             required
           />
 
-          {/* Password strength meter */}
           <PasswordStrengthMeter password={password} />
 
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="mt-4 w-full py-3 px-4 bg-linear-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-lg shadow-lg hover:from-purple-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-200"
+            className="mt-4 w-full py-3 px-4 bg-linear-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-lg shadow-lg hover:from-purple-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             type="submit"
             disabled={isLoading}
           >

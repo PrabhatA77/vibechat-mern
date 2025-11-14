@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import assets from "../assets/assets";
-const { updateProfile } = useContext(AuthContext);
-
+import { AuthContext } from "../context/AuthContext";   // ✅ IMPORT
 
 const ProfilePage = () => {
+
+  const { updateProfile } = useContext(AuthContext);    // ✅ FIXED HERE
+
   const [selectedImage, setSelectedImage] = useState(null);
   const [name, setName] = useState("Martin Jhonson");
   const [bio, setBio] = useState("Hey everyOne, I am using Vibechat");
@@ -31,10 +33,7 @@ const ProfilePage = () => {
         <h3 className="text-2xl font-semibold mb-2">Profile Details</h3>
 
         {/* Profile Image Upload */}
-        <label
-          htmlFor="avatar"
-          className="flex items-center gap-3 cursor-pointer"
-        >
+        <label htmlFor="avatar" className="flex items-center gap-3 cursor-pointer">
           <input
             type="file"
             id="avatar"
@@ -43,17 +42,11 @@ const ProfilePage = () => {
             onChange={(e) => setSelectedImage(e.target.files[0])}
           />
           <img
-            src={
-              selectedImage
-                ? URL.createObjectURL(selectedImage)
-                : assets.avatar_icon
-            }
+            src={selectedImage ? URL.createObjectURL(selectedImage) : assets.avatar_icon}
             alt="profile"
             className={`w-12 h-12 rounded-full border border-gray-300`}
           />
-          <span className="text-sm text-gray-300">
-            upload profile image
-          </span>
+          <span className="text-sm text-gray-300">upload profile image</span>
         </label>
 
         {/* Name Input */}
@@ -87,11 +80,7 @@ const ProfilePage = () => {
 
       {/* Right Side Logo */}
       <div className="flex justify-center items-center md:w-1/2">
-        <img
-          src={assets.logo}
-          alt="VibeChat logo"
-          className="w-40 h-40 object-contain"
-        />
+        <img src={assets.logo} alt="VibeChat logo" className="w-40 h-40 object-contain" />
       </div>
     </motion.div>
   );
