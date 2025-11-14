@@ -47,7 +47,7 @@ const PasswordStrengthMeter = ({ password }) => {
             </div>
 
             {/* Strength label */}
-            <p className="text-sm mt-1 text-gray-600 font-medium">
+            <p className="text-sm mt-1 text-gray-300 font-medium">
               Strength:{" "}
               <span className={`${colorClasses[score]} text-white px-2 py-0.5 rounded`}>
                 {strengthLabels[score]}
