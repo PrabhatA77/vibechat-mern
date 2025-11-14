@@ -67,7 +67,16 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
           <Search className="w-5 h-5 text-gray-500" />
           <input
             type="text"
-            className="bg-transparent border-none text-white text-base placeholder-[#c8c8c8] flex-1"
+            className="bg-transparent 
+            outline-none 
+            focus:outline-none 
+            focus:ring-0 
+            focus:border-none
+            text-white 
+            text-base 
+            placeholder-[#c8c8c8] 
+            border-none 
+            flex-1"
             placeholder="Search User..."
           />
         </div>

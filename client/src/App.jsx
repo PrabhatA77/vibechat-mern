@@ -10,21 +10,30 @@ import EmailVerificationPage from './pages/EmailVerificationPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import { Toaster } from 'react-hot-toast';
-import { AuthContext } from './context/AuthContext';
+import { AuthContext } from './context/AuthContext.jsx';
 
-// ⭐ Protected route
+// ⭐ Protected Route
 const ProtectedRoute = ({ children }) => {
-  const { authUser } = useContext(AuthContext);
+  const { authUser, loading } = useContext(AuthContext);
 
+  // ⏳ Wait until checkAuth finishes
+  if (loading) return <LoadingSpinner />;
+
+  // 🚫 Not logged in
   if (!authUser) return <Navigate to="/login" replace />;
+
+  // 🚫 Logged in but email not verified
   if (!authUser.isVerified) return <Navigate to="/verify-email" replace />;
 
   return children;
 };
 
-// ⭐ Redirect already logged in users
+// ⭐ Redirect Authenticated User (signup/login pages)
 const RedirectAuthenticateUser = ({ children }) => {
-  const { authUser } = useContext(AuthContext);
+  const { authUser, loading } = useContext(AuthContext);
+
+  // ⏳ Wait for checkAuth
+  if (loading) return <LoadingSpinner />;
 
   if (authUser && authUser.isVerified) {
     return <Navigate to="/" replace />;
