@@ -1,7 +1,7 @@
 import React, { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import { Mail, Lock } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Input from "../components/Input";
 import { AuthContext } from "../context/AuthContext.jsx";
 
@@ -10,10 +10,18 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
 
   const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    await login("login", { email, password });
+
+    const response = await login({
+      email,
+      password,
+    });
+
+    // If login successful, redirect
+    navigate("/");
   };
 
   return (
@@ -29,37 +37,20 @@ const LoginPage = () => {
         </h2>
 
         <form onSubmit={handleLogin}>
-          <Input
-            icon={Mail}
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Input
-            icon={Lock}
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <Input icon={Mail} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+
+          <Input icon={Lock} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
 
           <div className="flex items-center mb-6">
-            <Link
-              to="/forgot-password"
-              className="text-sm text-purple-300 hover:underline"
-            >
+            <Link to="/forgot-password" className="text-sm text-purple-300 hover:underline">
               Forget password?
             </Link>
           </div>
 
-          {/* ❌ Removed error display because error is not defined */}
-
           <motion.button
-            className="mt-5 w-full py-3 px-4 bg-linear-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-lg shadow-lg hover:from-purple-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-gray-900 transition duration-200"
+            className="mt-5 w-full py-3 px-4 bg-linear-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-lg shadow-lg"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            type="submit"
           >
             Login
           </motion.button>
@@ -69,9 +60,7 @@ const LoginPage = () => {
       <div className="px-8 py-8 bg-gray-900 bg-opacity-50 flex justify-center">
         <p className="text-sm text-gray-400">
           Don't have an account?{" "}
-          <Link to="/signup" className="text-indigo-300 hover:underline">
-            SignUp
-          </Link>
+          <Link to="/signup" className="text-indigo-300 hover:underline">SignUp</Link>
         </p>
       </div>
     </motion.div>

@@ -48,7 +48,7 @@ export const signup = async (req, res) => {
     await sendEmail(email, "Email Verification OTP", emailMessage);
 
     await user.save();
-
+    
     generateTokenAndSetCookie(res, user._id);
 
     res.status(201).json({
