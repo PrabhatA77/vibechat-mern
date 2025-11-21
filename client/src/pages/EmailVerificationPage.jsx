@@ -3,33 +3,41 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
 import { toast } from "react-hot-toast";
+import { Loader } from "lucide-react";
 
 const EmailVerificationPage = () => {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [isVerifying, setIsVerifying] = useState(false);
   const inputRefs = useRef([]);
   const navigate = useNavigate();
 
   const { axios } = useContext(AuthContext);
 
+  // Handle typing
   const handleChange = (index, value) => {
-    const newCode = [...code];
+    if (value.length > 1) return; // prevent invalid multi-char type
 
-    // Handle paste
-    if (value.length > 1) {
-      const pasted = value.slice(0, 6).split("");
-      for (let i = 0; i < 6; i++) newCode[i] = pasted[i] || "";
-      setCode(newCode);
+    const updated = [...code];
+    updated[index] = value;
+    setCode(updated);
 
-      const lastFilled = newCode.findLastIndex((d) => d !== "");
-      const autoFocusIndex = lastFilled < 5 ? lastFilled + 1 : 5;
-      inputRefs.current[autoFocusIndex].focus();
-      return;
+    if (value && index < 5) {
+      inputRefs.current[index + 1].focus();
     }
+  };
 
-    newCode[index] = value;
-    setCode(newCode);
+  // Handle paste of 6-digit OTP
+  const handlePaste = (e) => {
+    const paste = e.clipboardData.getData("text").trim();
 
-    if (value && index < 5) inputRefs.current[index + 1].focus();
+    if (paste.length === 6 && /^\d+$/.test(paste)) {
+      const digits = paste.split("");
+      setCode(digits);
+
+      // Move focus to last box
+      inputRefs.current[5].focus();
+    }
+    e.preventDefault();
   };
 
   const handleKeyDown = (index, e) => {
@@ -41,22 +49,26 @@ const EmailVerificationPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const verificationCode = code.join("");
+    const otp = code.join("");
+    if (otp.length < 6) return;
 
     try {
-      await axios.post("/api/auth/verify-email", { code: verificationCode });
-      toast.success("Email Verified Successfully");
-      navigate("/");
+      setIsVerifying(true);
+
+      await axios.post("/api/auth/verify-email", { code: otp });
+
+      // 🟢 CLEAR COOKIE so user can visit login page
+      await axios.post("/api/auth/logout");
+
+      toast.success("Email verified successfully! Please login.");
+
+      navigate("/login");
     } catch (err) {
       toast.error(err.response?.data?.message || "Verification failed");
+    } finally {
+      setIsVerifying(false);
     }
   };
-
-  useEffect(() => {
-    if (code.every((digit) => digit !== "")) {
-      handleSubmit(new Event("submit"));
-    }
-  }, [code]);
 
   return (
     <div className="max-w-md w-full bg-gray-700/30 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden">
@@ -69,8 +81,9 @@ const EmailVerificationPage = () => {
         <h2 className="text-3xl font-bold mb-6 text-center bg-linear-to-r from-purple-300 to-indigo-500 text-transparent bg-clip-text">
           Verify Your Email
         </h2>
+
         <p className="text-center text-gray-300 mb-6">
-          Enter the 6-digit code sent to your email address.
+          Enter the 6-digit code sent to your email.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -80,26 +93,30 @@ const EmailVerificationPage = () => {
                 key={index}
                 ref={(el) => (inputRefs.current[index] = el)}
                 type="text"
-                maxLength="1"
+                maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
-                className="w-12 h-12 text-center text-2xl font-bold bg-gray-700 text-white border-2 border-gray-500 rounded-lg focus:border-green-500"
+                onPaste={index === 0 ? handlePaste : undefined}
+                className="w-12 h-12 text-center text-2xl font-bold bg-gray-700 text-white 
+                           border-2 border-gray-500 rounded-lg focus:border-green-500 outline-none"
               />
             ))}
           </div>
-
-          {/* ❌ Removed error (not defined) */}
-          {/* ❌ Removed isLoading (not defined) */}
 
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             type="submit"
-            disabled={code.some((digit) => !digit)}
-            className="w-full bg-linear-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:from-purple-600 hover:to-indigo-700 transition disabled:opacity-50"
+            disabled={isVerifying || code.some((d) => !d)}
+            className="w-full bg-linear-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg
+                       hover:from-purple-600 hover:to-indigo-700 disabled:opacity-50"
           >
-            Verify Email
+            {isVerifying ? (
+              <Loader className="animate-spin mx-auto" size={22} />
+            ) : (
+              "Verify Email"
+            )}
           </motion.button>
         </form>
       </motion.div>
