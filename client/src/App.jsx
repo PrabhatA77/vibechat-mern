@@ -81,11 +81,7 @@ const App = () => {
           </RedirectAuthenticateUser>
         } />
 
-        <Route path="/reset-password" element={
-          <RedirectAuthenticateUser>
-            <ResetPasswordPage />
-          </RedirectAuthenticateUser>
-        } />
+        <Route path="/reset-password" element={ <ResetPasswordPage /> } />
 
         <Route path="/profile" element={
           <ProtectedRoute>

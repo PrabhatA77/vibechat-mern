@@ -17,9 +17,9 @@ app.use(cookieParser());
 //! initialize socket.io server 
 export const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL,
-        credentials: true
-    }
+        origin: process.env.FRONTEND_URI,
+        credentials: true,
+    },
 });
 
 
@@ -33,8 +33,25 @@ io.on("connection",(socket)=>{
 
     if(userId) userSocketMap[userId] = socket.id;
 
-    //! emit online users to all connected clients 
+    //! emit online list to all clients
     io.emit('getOnlineUsers',Object.keys(userSocketMap));
+
+
+    //!handle typing , forward to recipient socket id
+    socket.on("typing",({to})=>{
+        const receiverSocketId = userSocketMap[to];
+        if(receiverSocketId){
+            io.to(receiverSocketId).emit("typing",{from:userId});
+        }
+    });
+
+    socket.on("stop_trying",({to})=>{
+        const receiverSocketId = userSocketMap[to];
+        if(receiverSocketId){
+            io.to(receiverSocketId).emit("stop_trying",{from:userId});
+        }
+    });
+
 
     socket.on('disconnect',()=>{
         console.log("user disconnected: ",userId);
@@ -45,7 +62,7 @@ io.on("connection",(socket)=>{
 
 app.use(express.json({limit:'10mb'}));
 app.use(cors({
-    origin: process.env.FRONTEND_URL,   
+    origin: process.env.FRONTEND_URI,   
     credentials: true                 
 }));
 

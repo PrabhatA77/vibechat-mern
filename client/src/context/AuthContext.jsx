@@ -5,8 +5,10 @@ import { io } from "socket.io-client";
 
 export const AuthContext = createContext();
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
-axios.defaults.baseURL = backendUrl;
+// ⭐ IMPORTANT: socket.io must connect to backend URL directly
+const backendUrl = "http://localhost:5000";
+
+// ⭐ axios uses vite proxy for REST
 axios.defaults.withCredentials = true;
 
 export const AuthProvider = ({ children }) => {
@@ -14,41 +16,48 @@ export const AuthProvider = ({ children }) => {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [socket, setSocket] = useState(null);
 
-  // ⭐ CHECK AUTH
+  // ⭐ FIXED CHECK AUTH (prevent caching)
   const checkAuth = async () => {
     try {
-      const { data } = await axios.get("/api/auth/check-auth");
+      const { data } = await axios.get("/api/auth/check-auth", {
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      });
+
       if (data.success) {
-        setAuthUser(data.user);
-        connectSocket(data.user);
+        setAuthUser(data.user);   // <-- ONLY set user here
       }
-    } catch {
+    } catch (err) {
+      console.log("check-auth failed:", err);
       setAuthUser(null);
     }
   };
 
-  // ⭐ SIGNUP (separate function)
+  // ⭐ SIGNUP
   const signup = async (formData) => {
     try {
       const { data } = await axios.post("/api/auth/signup", formData);
-
       if (data.success) {
         toast.success(data.message);
-        return data; // return so signup page can redirect to verify-email
+        return data;
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Signup failed");
     }
   };
 
-  // ⭐ LOGIN (separate function)
+  // ⭐ LOGIN (NO SOCKET HERE)
   const login = async (formData) => {
     try {
-      const { data } = await axios.post("/api/auth/login", formData);
+      const { data } = await axios.post("/api/auth/login", formData, {
+        headers: { "Cache-Control": "no-cache" },
+      });
 
       if (data.success) {
-        setAuthUser(data.user);
-        connectSocket(data.user);
+        setAuthUser(data.user);   // <-- ONLY set user here
         toast.success("Logged in successfully!");
       }
     } catch (err) {
@@ -62,7 +71,10 @@ export const AuthProvider = ({ children }) => {
       await axios.post("/api/auth/logout");
       setAuthUser(null);
       setOnlineUsers([]);
-      socket?.disconnect();
+
+      if (socket) socket.disconnect();
+      setSocket(null);
+
       toast.success("Logged out");
     } catch (e) {
       toast.error("Logout failed");
@@ -70,34 +82,55 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ⭐ UPDATE PROFILE
-  const updateProfile = async (body) => {
-    try {
-      const { data } = await axios.put("/api/auth/update-profile", body);
-      if (data.success) {
-        setAuthUser(data.user);
-        toast.success("Profile updated");
-      }
-    } catch (e) {
-      toast.error("Profile update failed");
+const updateProfile = async (body) => {
+  try {
+    const { data } = await axios.put("/api/auth/update-profile", body);
+    if (data.success) {
+      setAuthUser(data.user);
+      toast.success("Profile updated");
     }
-  };
+  } catch (e) {
+    toast.error("Profile update failed");
+  }
+};
 
-  // ⭐ SOCKET CONNECTION
+
+  // ⭐ SOCKET CONNECTION (fixed)
   const connectSocket = (user) => {
-    if (!user || socket?.connected) return;
+    if (!user || !user._id) {
+      console.log("Socket not connected: invalid user", user);
+      return;
+    }
+
+    if (socket) {
+      console.log("Socket already exists");
+      return;
+    }
 
     const newSocket = io(backendUrl, {
-      query: { userId: user._id },
       withCredentials: true,
+      query: { userId: user._id },
     });
 
     setSocket(newSocket);
+
+    newSocket.on("connect", () => {
+      console.log("socket connected", newSocket.id);
+    });
 
     newSocket.on("getOnlineUsers", (users) => {
       setOnlineUsers(users);
     });
   };
 
+  // ⭐ NEW — CORRECT PLACE TO CONNECT SOCKET
+  useEffect(() => {
+    if (authUser && authUser._id) {
+      connectSocket(authUser);
+    }
+  }, [authUser]);
+
+  // Run checkAuth on load
   useEffect(() => {
     checkAuth();
   }, []);
@@ -108,6 +141,7 @@ export const AuthProvider = ({ children }) => {
         axios,
         authUser,
         onlineUsers,
+        socket,
         signup,
         login,
         logout,

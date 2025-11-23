@@ -46,9 +46,9 @@ export const sendWelcomeEmail = async (toEmail, name) => {
     });
 
   const mailOptions = {
-    from: `"Your App" <${process.env.SMTP_USER}>`,
+    from: `"Vibe Chat" <${process.env.SMTP_USER}>`,
     to: toEmail,
-    subject: 'Welcome to Our App 🎉',
+    subject: 'Welcome to Vibe Chat 🎉',
     html: welcomeEmail(name),
   };
 

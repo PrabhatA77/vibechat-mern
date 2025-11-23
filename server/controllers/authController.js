@@ -48,8 +48,8 @@ export const signup = async (req, res) => {
     await sendEmail(email, "Email Verification OTP", emailMessage);
 
     await user.save();
-    
-    generateTokenAndSetCookie(res, user._id);
+
+    generateTokenAndSetCookie(user._id, res);
 
     res.status(201).json({
       success: true,
@@ -81,12 +81,10 @@ export const verifyEmail = async (req, res) => {
       verificationTokenExpiresAt: { $gt: Date.now() },
     });
     if (!user) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Invalid or expired verification code",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Invalid or expired verification code",
+      });
     }
 
     // check if code is correct and not expired
@@ -118,8 +116,31 @@ export const verifyEmail = async (req, res) => {
   }
 };
 
-export const login = async (req, res) => {
+export const resendOTP = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
 
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "user not found" });
+    }
+
+    const newCode = genVerificationCode();
+    user.verificationToken = newCode;
+    user.verificationTokenExpiresAt = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    const emailMessage = otpEmailTemplate(newCode);
+    await sendEmail(user.email, "Your New OTP Code", emailMessage);
+
+    return res.json({ success: true, message: "OTP resent successfully!" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -139,15 +160,15 @@ export const login = async (req, res) => {
     if (!user) {
       return res
         .status(400)
-        .json({ success: false, message: "Invalid credentials." });
+        .json({ success: false, message: "User not found. Please sign up." });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    
+
     if (!isPasswordValid) {
       return res
         .status(400)
-        .json({ success: false, message: "Invalid credentials." });
+        .json({ success: false, message: "Incorrect Password." });
     }
     if (!user.isVerified) {
       return res
@@ -155,7 +176,7 @@ export const login = async (req, res) => {
         .json({ success: false, message: "Please verify the user first." });
     }
 
-    generateTokenAndSetCookie(res, user._id);
+    generateTokenAndSetCookie(user._id, res);
 
     user.lastLogin = Date.now();
     user.save();
@@ -226,7 +247,7 @@ export const forgotPassword = async (req, res) => {
 };
 
 export const resetPassword = async (req, res) => {
-  const { token } = req.params;
+  const token = req.query.token;
   const { password } = req.body;
 
   try {
@@ -290,25 +311,32 @@ export const checkAuth = async (req, res) => {
 };
 
 //! controller to update the user profile
-export const updateProfile = async (req,res)=>{
+export const updateProfile = async (req, res) => {
   try {
-    const {profilePic,name,bio} = req.body;
+    const { profilePic, name, bio } = req.body;
 
     const userId = req.user._id;
 
     let updatedUser;
-    
-    if(!profilePic){
-      updatedUser = await User.findByIdAndUpdate(userId,{bio,name},{new:true});
-    }
-    else{
+
+    if (!profilePic) {
+      updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { bio, name },
+        { new: true }
+      );
+    } else {
       const upload = await cloudinary.uploader.upload(profilePic);
-      updatedUser = await User.findByIdAndUpdate(userId,{profilePic:upload.secure_url,bio,name},{new:true});
+      updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { profilePic: upload.secure_url, bio, name },
+        { new: true }
+      );
     }
 
-    res.json({success:true,user:updatedUser});
+    res.json({ success: true, user: updatedUser });
   } catch (error) {
     console.log(error.message);
-    res.json({success:false,message:error.message})
+    res.json({ success: false, message: error.message });
   }
-}
+};

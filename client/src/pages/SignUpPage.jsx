@@ -52,11 +52,35 @@ const SignUpPage = () => {
         </h2>
 
         <form onSubmit={handleSignup}>
-          <Input icon={User} placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input
+            icon={User}
+            type="text"
+            name="name"
+            autoComplete="name"
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-          <Input icon={Mail} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input
+            icon={Mail}
+            type="email"
+            name="email"
+            autoComplete="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-          <Input icon={Lock} placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input
+            icon={Lock}
+            placeholder="Password"
+            name="password"
+            autoComplete="new-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
           <textarea
             className="w-full pl-3 pr-3 py-2 bg-gray-800 bg-opacity-40 rounded-lg border border-[#2a2540] 
@@ -69,7 +93,9 @@ const SignUpPage = () => {
           />
 
           {isDataSubmitted && (!name || !email || !password || !bio) && (
-            <p className="text-red-400 font-semibold mt-2">Please fill in all fields.</p>
+            <p className="text-red-400 font-semibold mt-2">
+              Please fill in all fields.
+            </p>
           )}
 
           <PasswordStrengthMeter password={password} />
@@ -80,14 +106,21 @@ const SignUpPage = () => {
             whileTap={{ scale: 0.98 }}
             disabled={isLoading}
           >
-            {isLoading ? <Loader className="animate-spin mx-auto" size={24} /> : "Sign Up"}
+            {isLoading ? (
+              <Loader className="animate-spin mx-auto" size={24} />
+            ) : (
+              "Sign Up"
+            )}
           </motion.button>
         </form>
       </div>
 
       <div className="px-8 py-8 bg-gray-900 bg-opacity-50 flex justify-center">
         <p className="text-sm text-gray-400">
-          Already have an account? <Link to="/login" className="text-indigo-300 hover:underline">Login</Link>
+          Already have an account?{" "}
+          <Link to="/login" className="text-indigo-300 hover:underline">
+            Login
+          </Link>
         </p>
       </div>
     </motion.div>

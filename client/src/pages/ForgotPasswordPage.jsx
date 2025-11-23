@@ -3,24 +3,30 @@ import { motion } from "framer-motion";
 import Input from "../components/Input";
 import { ArrowLeft, Loader, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";  // ✅ FIX
+import { AuthContext } from "../context/AuthContext";  
 
 const ForgotPasswordPage = () => {
-  const { axios } = useContext(AuthContext);  // ✅ FIX (hooks inside component)
+  const { axios } = useContext(AuthContext);  
 
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const { isLoading, forgotPassword } = useAuthStore();
+  const [ isLoading, setIsLoading ] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+
+      setIsLoading(true);
+
       await axios.post("/api/auth/forgot-password", { email });
+
       setIsSubmitted(true);
     } catch (error) {
       console.error("Reset failed:", error);
       alert("Something went wrong. Please try again.");
+    }finally{
+      setIsLoading(false);
     }
   };
 

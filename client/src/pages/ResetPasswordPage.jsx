@@ -6,7 +6,7 @@ import { Lock } from "lucide-react";
 import toast from "react-hot-toast";
 import PasswordStrengthMeter from "../components/PasswordStrengthMeter";
 import { AuthContext } from "../context/AuthContext";  // ✅ IMPORT CONTEXT
-import { useAuthStore } from "../store/authStore";      // Make sure this is imported too
+
 
 const ResetPasswordPage = () => {
 
@@ -15,8 +15,7 @@ const ResetPasswordPage = () => {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
-  const { resetPassword, error, isLoading, message } = useAuthStore();
+  const [isLoading,setIsLoading] = useState(false);
 
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
@@ -37,15 +36,21 @@ const ResetPasswordPage = () => {
     }
 
     try {
+
+      setIsLoading(true);
+
       await axios.post(`/api/auth/reset-password?token=${token}`, {
         password,
       });
 
       toast.success("Password reset successfully, redirecting to login...");
       setTimeout(() => navigate("/login"), 1500);
+
     } catch (error) {
       console.error(error);
-      toast.error(error.message || "Error resetting password");
+      toast.error(error.response?.data?.message || "Error resetting password");
+    } finally{
+      setIsLoading(false);
     }
   };
 
@@ -60,9 +65,6 @@ const ResetPasswordPage = () => {
         <h2 className="text-3xl font-bold mb-6 text-center bg-linear-to-r from-purple-300 to-indigo-500 text-transparent bg-clip-text">
           Reset Password
         </h2>
-
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-        {message && <p className="text-green-500 text-sm mb-4">{message}</p>}
 
         <form onSubmit={handleSubmit}>
           <Input

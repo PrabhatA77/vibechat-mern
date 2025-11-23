@@ -6,7 +6,10 @@ import { io,userSocketMap } from "../server.js";
 //!get users list others then logged in user
 export const getUsersForSidebar = async (req,res)=>{
     try {
-        const userId = req.user._id;
+        const userId = req.userId ? req.userId : req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
         const filteredUsers = await User.find({_id:{$ne:userId}}).select("-password");
 
         //count number of messages not seen 
@@ -30,7 +33,10 @@ export const getUsersForSidebar = async (req,res)=>{
 export const getMessages = async (req,res)=>{
     try {
         const {id:selectedUserId} = req.params;
-        const myId = req.user._id;
+        const myId = req.userId ? req.userId : req.user?._id;
+    if (!myId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
 
         const messages = await Message.find({
             $or:[
@@ -75,7 +81,10 @@ export const sendMessage = async (req,res)=>{
         
         const {text,image} = req.body;
         const receiverId = req.params.id;
-        const senderId = req.user._id;
+        const senderId = req.userId ? req.userId : req.user?._id;
+    if (!senderId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
 
         if (!text && !image) {
             return res.json({

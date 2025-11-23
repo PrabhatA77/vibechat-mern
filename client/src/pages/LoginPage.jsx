@@ -37,9 +37,9 @@ const LoginPage = () => {
         </h2>
 
         <form onSubmit={handleLogin}>
-          <Input icon={Mail} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input icon={Mail} type="email" name="email" autoComplete="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
 
-          <Input icon={Lock} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <Input icon={Lock} type="password" name="password" autoComplete="current-password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
 
           <div className="flex items-center mb-6">
             <Link to="/forgot-password" className="text-sm text-purple-300 hover:underline">

@@ -1,17 +1,42 @@
-import React, { useState } from "react";
-import assets, { userDummyData } from "../assets/assets";
+import React, { useEffect, useState, useContext } from "react";
+import assets from "../assets/assets";
 import { MoreVertical, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { AuthContext } from "../context/AuthContext.jsx";
 
 const Sidebar = ({ selectedUser, setSelectedUser }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [unseen, setUnseen] = useState({}); // {userId:count}
+  const { axios, onlineUsers, authUser } = useContext(AuthContext);
+
+  useEffect(() => {
+    // fetch users from backend
+    const fetchUsers = async () => {
+      try {
+        const { data } = await axios.get("/api/messages/users");
+        if (data.success) {
+          setUsers(data.users);
+          setUnseen(data.unseenMessages || {});
+        }
+      } catch (error) {
+        console.error("Failed to fetch users: ", error);
+      }
+    };
+
+    fetchUsers();
+    // you can re-fetch periodically or on socket onlineUsers change if needed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const isOnline = (userId) => onlineUsers?.includes(userId);
 
   return (
     <motion.div
-      animate={{width:selectedUser?"250px":"536px"}}
-      transition={{duration:0.5,ease:"easeInOut"}}
+      animate={{ width: selectedUser ? "250px" : "536px" }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
       className={` bg-[#8185B2]/10 h-full p-5 rounded-r-xl overflow-y-scroll text-white ${
         selectedUser ? "max-md:hidden" : ""
       }`}
@@ -83,34 +108,47 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
       </div>
 
       <div className="flex flex-col">
-        {userDummyData.map((user, index) => (
-          <div
-            onClick={() => setSelectedUser(user)}
-            key={index}
-            className={`relative flex items-center gap-2 p-2 pl-4 rounded cursor-pointer max-sm:text-sm
+        {users.length > 0 ? (
+          users.map((user) => (
+            <div
+              onClick={() => setSelectedUser(user)}
+              key={user._id}
+              className={`relative flex items-center gap-2 p-2 pl-4 rounded cursor-pointer max-sm:text-sm
     hover:bg-[#282142]/30 hover:scale-[1.02] transform transition-all duration-200
-    ${selectedUser?._id === user._id && "bg-[#282142]/50"}`}
-          >
-            <img
-              src={user?.profilePic || assets.avatar_icon}
-              alt=""
-              className="w-[45px] aspect-square rounded-full"
-            />
-            <div className="flex flex-col leading-5">
-              <p className="text-indigo-100">{user.fullName}</p>
-              {index < 3 ? (
-                <span className="text-indigo-300 text-xs">Online</span>
-              ) : (
-                <span className="text-neutral-400 text-xs">Offline</span>
+    ${selectedUser?._id === user._id ? "bg-[#282142]/50" : ""}`}
+            >
+              <img
+                src={user?.profilePic || assets.avatar_icon}
+                alt=""
+                className="w-[45px] aspect-square rounded-full"
+              />
+              <div className="flex flex-col leading-5">
+                <p className="text-indigo-100">{user.fullName}</p>
+                <span
+                  className={`text-xs ${
+                    isOnline(user._id) ? "text-green-300" : "text-neutral-400"
+                  }`}
+                >
+                  {isOnline(user._id) ? "Online" : "Offline"}
+                </span>
+              </div>
+
+              {/* unseen messages count */}
+              {unseen[user._id] > 0 && (
+                <p className="absolute top-4 right-4 text-xs h-5 w-5 flex justify-center items-center rounded-full bg-indigo-500/80">
+                  {unseen[user._id]}
+                </p>
               )}
             </div>
-            {index > 2 && (
-              <p className="absolute top-4 right-4 text-xs h-5 w-5 flex justify-center items-center rounded-full bg-indigo-500/40">
-                {index}
-              </p>
-            )}
+          ))
+        ) : (
+          <div className="px-4 py-8">
+            <p className="text-center text-gray-400">
+              No other users found. Create another account in a separate browser
+              or device to start chatting.
+            </p>
           </div>
-        ))}
+        )}
       </div>
     </motion.div>
   );
