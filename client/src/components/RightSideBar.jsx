@@ -1,12 +1,31 @@
-import React from 'react'
-import assets, { imagesDummyData } from '../assets/assets';
-import {motion} from "framer-motion";
-import { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react'
+import assets from '../assets/assets';
+import { motion } from "framer-motion";
 import { AuthContext } from '../context/AuthContext';
+import { Ban, Trash2 } from 'lucide-react';
 
-const RightSideBar = ({selectedUser}) => {
+const RightSideBar = ({ selectedUser }) => {
+  // Force HMR update
 
-  const {logout} = useContext(AuthContext);
+  const { logout, onlineUsers, axios, authUser, setAuthUser } = useContext(AuthContext);
+  const isOnline = onlineUsers.includes(selectedUser?._id);
+  const [media, setMedia] = useState([]);
+
+  useEffect(() => {
+    if (!selectedUser) return;
+    const fetchMedia = async () => {
+      try {
+        const { data } = await axios.get(`/api/messages/${selectedUser._id}`);
+        if (data.success) {
+          const images = data.messages.filter(msg => msg.image);
+          setMedia(images);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    fetchMedia();
+  }, [selectedUser, axios]);
 
   return selectedUser && (
     <motion.div
@@ -14,36 +33,100 @@ const RightSideBar = ({selectedUser}) => {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.9 }}
-      className={`bg-[#8185B2]/10 text-white w-full relative overflow-y-scroll ${selectedUser ? "max-md:hidden":""}`}>
+      className={`bg-[#8185B2]/10 text-white w-full relative overflow-y-scroll ${selectedUser ? "max-md:hidden" : ""}`}>
       <div className='pt-16 flex flex-col items-center gap-2 text-xs font-light mx-auto'>
-        <img src={selectedUser?.profilePic || assets.avatar_icon} alt="" 
-          className='w-20 aspect-square rounded-full'/>
-          <h1 className='px-10 text-xl font-medium mx-auto flex items-center gap-2'>
-            <p className='w-2 h-2 rounded-full bg-green-500'></p>
-            {selectedUser.fullName}
-          </h1>
-          <p className='px-10 mx-auto'>{selectedUser.bio}</p>
+        <img src={selectedUser?.profilePic || assets.avatar_icon} alt=""
+          className='w-20 aspect-square rounded-full object-cover' />
+        <h1 className='px-10 text-xl font-medium mx-auto flex items-center gap-2'>
+          <p className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-500'}`}></p>
+          {selectedUser.name}
+        </h1>
+        <p className='px-10 mx-auto text-center text-gray-300'>{selectedUser.bio || "No bio available"}</p>
       </div>
 
-      <hr className='border-[#ffffff50] my-4'/>
+      <hr className='border-[#ffffff50] my-4' />
 
       <div className='px-5 text-xs'>
-        <p>Media</p>
-        <div className='mt-2 max-h-[200px] overflow-y-scroll grid grid-cols-2 gap-4 opacity-80'>
-          {imagesDummyData.map((url,index)=>(
-            <div key={index} onClick={()=>window.open(url)} className='cursor-pointer rounded'>
-              <img src={url} alt="" className='h-full rounded-md'/>
-            </div>
-          ))}
-        </div>
+        <p className='mb-2 font-medium'>Shared Media</p>
+        {media.length > 0 ? (
+          <div className='max-h-[200px] overflow-y-scroll grid grid-cols-2 gap-2 opacity-80 pr-1'>
+            {media.map((msg) => (
+              <div key={msg._id} onClick={() => window.open(msg.image)} className='cursor-pointer rounded overflow-hidden aspect-square border border-white/10 hover:opacity-80 transition'>
+                <img src={msg.image} alt="" className='w-full h-full object-cover' />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className='text-gray-400 italic'>No media shared yet</p>
+        )}
       </div>
 
-      <div 
-        className='absolute bottom-5 left-1/2 transform -translate-x-1/2 bg-linear-to-r from-purple-300 to-violet-500 text-white border-none text-sm font-light py-2 px-20 rounded-full cursor-pointer hover:from-purple-400 hover:to-violet-600'
-          onClick={logout}
+      <div className='mt-8 px-6 flex flex-col gap-3'>
+        <button
+          onClick={async () => {
+            if (!window.confirm("Are you sure you want to clear this chat?")) return;
+            try {
+              const { data } = await axios.delete(`/api/messages/delete/${selectedUser._id}`);
+              if (data.success) {
+                setMedia([]);
+                alert("Chat cleared successfully");
+              }
+            } catch (error) {
+              console.error(error);
+              alert("Failed to clear chat");
+            }
+          }}
+          className='w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors'
         >
-          Logout
-        </div>
+          <Trash2 size={16} />
+          Clear Chat
+        </button>
+        <button
+          onClick={async () => {
+            const isBlocked = authUser.blockedUsers.includes(selectedUser._id);
+            const action = isBlocked ? "unblock" : "block";
+
+            if (!window.confirm(`Are you sure you want to ${action} ${selectedUser.name}?`)) return;
+
+            try {
+              const { data } = await axios.put(`/api/messages/${action}/${selectedUser._id}`);
+              if (data.success) {
+                // Update local state manually to reflect change immediately
+                if (isBlocked) {
+                  setAuthUser(prev => ({
+                    ...prev,
+                    blockedUsers: prev.blockedUsers.filter(id => id !== selectedUser._id)
+                  }));
+                  alert("User unblocked successfully");
+                } else {
+                  setAuthUser(prev => ({
+                    ...prev,
+                    blockedUsers: [...prev.blockedUsers, selectedUser._id]
+                  }));
+                  alert("User blocked successfully");
+                }
+              }
+            } catch (error) {
+              console.error(error);
+              alert(`Failed to ${action} user`);
+            }
+          }}
+          className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 transition-colors ${authUser?.blockedUsers?.includes(selectedUser._id)
+            ? 'bg-green-500/10 hover:bg-green-500/20 text-green-400'
+            : 'bg-stone-500/10 hover:bg-stone-500/20 text-stone-400'
+            }`}
+        >
+          <Ban size={16} />
+          {authUser?.blockedUsers?.includes(selectedUser._id) ? "Unblock User" : "Block User"}
+        </button>
+      </div>
+
+      <div
+        className='absolute bottom-5 left-1/2 transform -translate-x-1/2 text-gray-400 text-sm font-light cursor-pointer hover:text-white transition-colors'
+        onClick={logout}
+      >
+        Logout
+      </div>
     </motion.div>
   )
 }

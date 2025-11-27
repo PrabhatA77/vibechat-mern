@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from "react";
 import assets from "../assets/assets";
-import { MoreVertical, Search } from "lucide-react";
+import { MoreVertical, Search, Bot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthContext } from "../context/AuthContext.jsx";
@@ -37,9 +37,8 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
     <motion.div
       animate={{ width: selectedUser ? "250px" : "536px" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className={` bg-[#8185B2]/10 h-full p-5 rounded-r-xl overflow-y-scroll text-white ${
-        selectedUser ? "max-md:hidden" : ""
-      }`}
+      className={` bg-[#8185B2]/10 h-full p-5 rounded-r-xl overflow-y-scroll text-white ${selectedUser ? "max-md:hidden" : ""
+        }`}
     >
       <div className="pb-5">
         {/* Header section */}
@@ -123,11 +122,13 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
                 className="w-[45px] aspect-square rounded-full"
               />
               <div className="flex flex-col leading-5">
-                <p className="text-indigo-100">{user.fullName}</p>
+                <p className="text-indigo-100 flex items-center gap-1">
+                  {user.name}
+                  {user.isAI && <Bot size={14} className="text-blue-400" />}
+                </p>
                 <span
-                  className={`text-xs ${
-                    isOnline(user._id) ? "text-green-300" : "text-neutral-400"
-                  }`}
+                  className={`text-xs ${isOnline(user._id) ? "text-green-300" : "text-neutral-400"
+                    }`}
                 >
                   {isOnline(user._id) ? "Online" : "Offline"}
                 </span>

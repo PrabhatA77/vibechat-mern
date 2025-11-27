@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await axios.post("/api/auth/logout");
 
-      if(socket) socket.disconnect();
+      if (socket) socket.disconnect();
       setSocket(null);
 
       setAuthUser(null);
@@ -96,25 +96,25 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ⭐ UPDATE PROFILE
-const updateProfile = async (body) => {
-  try {
-    const { data } = await axios.put("/api/auth/update-profile", body , {
-      headers:{
-        "Content-Type":"multipart/form-data",
-      },
-    });
+  const updateProfile = async (body) => {
+    try {
+      const { data } = await axios.put("/api/auth/update-profile", body, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-    if (data.success) {
-      setAuthUser(data.user);
+      if (data.success) {
+        setAuthUser(data.user);
 
-      toast.success("Profile updated");
+        toast.success("Profile updated");
 
-      return data.user;
+        return data.user;
+      }
+    } catch (e) {
+      toast.error("Profile update failed");
     }
-  } catch (e) {
-    toast.error("Profile update failed");
-  }
-};
+  };
 
 
   // ⭐ SOCKET CONNECTION (fixed)
@@ -168,6 +168,7 @@ const updateProfile = async (body) => {
         login,
         logout,
         updateProfile,
+        setAuthUser,
       }}
     >
       {children}
