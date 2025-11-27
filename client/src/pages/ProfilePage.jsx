@@ -1,21 +1,64 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext,useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import assets from "../assets/assets";
+import toast from "react-hot-toast";
 import { AuthContext } from "../context/AuthContext";   // ✅ IMPORT
 
 const ProfilePage = () => {
 
-  const { updateProfile } = useContext(AuthContext);    // ✅ FIXED HERE
-
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [name, setName] = useState("Martin Jhonson");
-  const [bio, setBio] = useState("Hey everyOne, I am using Vibechat");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const { updateProfile , authUser } = useContext(AuthContext);    // ✅ FIXED HERE
+
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [preview,setPreview] = useState(null);
+
+  const [name, setName] = useState(authUser.name);
+  const [bio, setBio] = useState(authUser.bio);
+
+  const [loading,setLoading] = useState(false);
+
+  //load existing user data
+  useEffect(()=>{
+    if(authUser){
+      setName(authUser.name || "");
+      setBio(authUser.bio || "");
+      setPreview(authUser.profilePic || null);
+    }
+  },[authUser])
+
+  //display image preview
+  useEffect(()=>{
+    if(!selectedImage) return ;
+    const objectUrl = URL.createObjectURL(selectedImage);
+    setPreview(objectUrl);
+    return ()=> URL.revokeObjectURL(objectUrl);
+  },[selectedImage]);
+
+  const handleSubmit = async(e) => {
     e.preventDefault();
-    navigate("/");
+
+    setLoading(true);
+
+    try {
+      //prepare data
+      const data = new FormData();
+      data.append("name",name);
+      data.append("bio",bio);
+      if(selectedImage) data.append("avatar",selectedImage);
+
+      //update profile
+      await updateProfile(data);
+      toast.success("Profile updated successfully")
+
+      navigate("/");
+
+    } catch (error) {
+      toast.error("Failed to update profile!")
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,9 +84,13 @@ const ProfilePage = () => {
             hidden
             onChange={(e) => setSelectedImage(e.target.files[0])}
           />
-          <img
-            src={selectedImage ? URL.createObjectURL(selectedImage) : assets.avatar_icon}
+
+          <motion.img
+            src={preview || assets.avatar_icon}
             alt="profile"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6 }}
             className={`w-12 h-12 rounded-full border border-gray-300`}
           />
           <span className="text-sm text-gray-300">upload profile image</span>
@@ -72,9 +119,10 @@ const ProfilePage = () => {
         {/* Save Button */}
         <button
           type="submit"
+          disabled={loading}
           className="mt-2 bg-linear-to-r from-purple-400 to-violet-600 hover:from-violet-500 hover:to-purple-700 text-white py-2 rounded-full text-lg font-semibold transition-all duration-300"
         >
-          Save
+          {loading ? "Saving..." : "Save"}
         </button>
       </form>
 

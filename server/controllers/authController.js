@@ -313,30 +313,25 @@ export const checkAuth = async (req, res) => {
 //! controller to update the user profile
 export const updateProfile = async (req, res) => {
   try {
-    const { profilePic, name, bio } = req.body;
+    const userId = req.userId; //from verify token
+    
+    const {name, bio } = req.body;
+    let updateData = {name,bio};
 
-    const userId = req.user._id;
-
-    let updatedUser;
-
-    if (!profilePic) {
-      updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { bio, name },
-        { new: true }
-      );
-    } else {
-      const upload = await cloudinary.uploader.upload(profilePic);
-      updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { profilePic: upload.secure_url, bio, name },
-        { new: true }
-      );
+    //if there is an image file upload it
+    if(req.file){
+      const upload = await cloudinary.uploader.upload(req.file.path,{
+        folder : "vibechat_profiles",
+      });
+      updateData.profilePic = upload.secure_url;;
     }
+
+    const updatedUser = await User.findByIdAndUpdate(userId,updateData,{new : true}).select("-password");
+
 
     res.json({ success: true, user: updatedUser });
   } catch (error) {
     console.log(error.message);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: "Profile update failed" });
   }
 };

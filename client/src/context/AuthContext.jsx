@@ -11,6 +11,17 @@ const backendUrl = "http://localhost:5000";
 // ⭐ axios uses vite proxy for REST
 axios.defaults.withCredentials = true;
 
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response.status === 401) {
+      setAuthUser(null);
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const AuthProvider = ({ children }) => {
   const [authUser, setAuthUser] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
@@ -69,13 +80,16 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await axios.post("/api/auth/logout");
+
+      if(socket) socket.disconnect();
+      setSocket(null);
+
       setAuthUser(null);
       setOnlineUsers([]);
 
-      if (socket) socket.disconnect();
-      setSocket(null);
-
       toast.success("Logged out");
+      window.location.href = "/login";
+
     } catch (e) {
       toast.error("Logout failed");
     }
@@ -84,10 +98,18 @@ export const AuthProvider = ({ children }) => {
   // ⭐ UPDATE PROFILE
 const updateProfile = async (body) => {
   try {
-    const { data } = await axios.put("/api/auth/update-profile", body);
+    const { data } = await axios.put("/api/auth/update-profile", body , {
+      headers:{
+        "Content-Type":"multipart/form-data",
+      },
+    });
+
     if (data.success) {
       setAuthUser(data.user);
+
       toast.success("Profile updated");
+
+      return data.user;
     }
   } catch (e) {
     toast.error("Profile update failed");

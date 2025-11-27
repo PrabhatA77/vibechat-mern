@@ -1,8 +1,13 @@
 import React from 'react'
 import assets, { imagesDummyData } from '../assets/assets';
 import {motion} from "framer-motion";
+import { useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 
 const RightSideBar = ({selectedUser}) => {
+
+  const {logout} = useContext(AuthContext);
+
   return selectedUser && (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -33,7 +38,12 @@ const RightSideBar = ({selectedUser}) => {
         </div>
       </div>
 
-      <div className='absolute bottom-5 left-1/2 transform -translate-x-1/2 bg-linear-to-r from-purple-300 to-violet-500 text-white border-none text-sm font-light py-2 px-20 rounded-full cursor-pointer hover:from-purple-400 hover:to-violet-600'>Logout</div>
+      <div 
+        className='absolute bottom-5 left-1/2 transform -translate-x-1/2 bg-linear-to-r from-purple-300 to-violet-500 text-white border-none text-sm font-light py-2 px-20 rounded-full cursor-pointer hover:from-purple-400 hover:to-violet-600'
+          onClick={logout}
+        >
+          Logout
+        </div>
     </motion.div>
   )
 }

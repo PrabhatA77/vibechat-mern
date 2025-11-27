@@ -10,7 +10,7 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [users, setUsers] = useState([]);
   const [unseen, setUnseen] = useState({}); // {userId:count}
-  const { axios, onlineUsers, authUser } = useContext(AuthContext);
+  const { axios, onlineUsers, logout } = useContext(AuthContext);
 
   useEffect(() => {
     // fetch users from backend
@@ -79,7 +79,7 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
                     Edit Profile
                   </p>
                   <hr className="my-2 border-t border-gray-500" />
-                  <p className="cursor-pointer text-sm hover:text-red-400">
+                  <p onClick={logout} className="cursor-pointer text-sm hover:text-red-400">
                     Logout
                   </p>
                 </motion.div>
