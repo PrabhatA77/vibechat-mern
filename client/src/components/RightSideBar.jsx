@@ -1,12 +1,11 @@
 import React, { useContext, useEffect, useState } from 'react'
+import toast from "react-hot-toast";
 import assets from '../assets/assets';
 import { motion } from "framer-motion";
 import { AuthContext } from '../context/AuthContext';
 import { Ban, Trash2 } from 'lucide-react';
 
-const RightSideBar = ({ selectedUser }) => {
-  // Force HMR update
-
+const RightSideBar = ({ selectedUser, selectedMessages, clearSelection }) => {
   const { logout, onlineUsers, axios, authUser, setAuthUser } = useContext(AuthContext);
   const isOnline = onlineUsers.includes(selectedUser?._id);
   const [media, setMedia] = useState([]);
@@ -27,7 +26,11 @@ const RightSideBar = ({ selectedUser }) => {
     fetchMedia();
   }, [selectedUser, axios]);
 
-  return selectedUser && (
+  if (!selectedUser) {
+    return <div className='hidden md:flex bg-[#8185B2]/10 w-full h-full'></div>;
+  }
+
+  return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -62,6 +65,29 @@ const RightSideBar = ({ selectedUser }) => {
       </div>
 
       <div className='mt-8 px-6 flex flex-col gap-3'>
+        {selectedMessages && selectedMessages.size > 0 && (
+          <button
+            onClick={async () => {
+              if (!window.confirm(`Delete ${selectedMessages.size} messages?`)) return;
+              try {
+                const { data } = await axios.post('/api/messages/delete-selected', {
+                  messageIds: Array.from(selectedMessages)
+                });
+                if (data.success) {
+                  clearSelection();
+                  toast.success("Messages deleted");
+                }
+              } catch (error) {
+                console.error(error);
+                toast.error("Failed to delete messages");
+              }
+            }}
+            className='w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors'
+          >
+            <Trash2 size={16} />
+            Delete Selected ({selectedMessages.size})
+          </button>
+        )}
         <button
           onClick={async () => {
             if (!window.confirm("Are you sure you want to clear this chat?")) return;
@@ -81,44 +107,69 @@ const RightSideBar = ({ selectedUser }) => {
           <Trash2 size={16} />
           Clear Chat
         </button>
-        <button
-          onClick={async () => {
-            const isBlocked = authUser.blockedUsers.includes(selectedUser._id);
-            const action = isBlocked ? "unblock" : "block";
 
-            if (!window.confirm(`Are you sure you want to ${action} ${selectedUser.name}?`)) return;
-
-            try {
-              const { data } = await axios.put(`/api/messages/${action}/${selectedUser._id}`);
-              if (data.success) {
-                // Update local state manually to reflect change immediately
-                if (isBlocked) {
-                  setAuthUser(prev => ({
-                    ...prev,
-                    blockedUsers: prev.blockedUsers.filter(id => id !== selectedUser._id)
-                  }));
-                  alert("User unblocked successfully");
-                } else {
-                  setAuthUser(prev => ({
-                    ...prev,
-                    blockedUsers: [...prev.blockedUsers, selectedUser._id]
-                  }));
-                  alert("User blocked successfully");
+        {selectedUser.isGroup && selectedUser.admins.some(admin => admin._id === authUser._id) && (
+          <button
+            onClick={async () => {
+              if (!window.confirm("Are you sure you want to delete this group? This action cannot be undone.")) return;
+              try {
+                const { data } = await axios.delete(`/api/groups/${selectedUser._id}`);
+                if (data.success) {
+                  toast.success("Group deleted successfully");
+                  window.location.reload();
                 }
+              } catch (error) {
+                console.error(error);
+                toast.error("Failed to delete group");
               }
-            } catch (error) {
-              console.error(error);
-              alert(`Failed to ${action} user`);
-            }
-          }}
-          className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 transition-colors ${authUser?.blockedUsers?.includes(selectedUser._id)
-            ? 'bg-green-500/10 hover:bg-green-500/20 text-green-400'
-            : 'bg-stone-500/10 hover:bg-stone-500/20 text-stone-400'
-            }`}
-        >
-          <Ban size={16} />
-          {authUser?.blockedUsers?.includes(selectedUser._id) ? "Unblock User" : "Block User"}
-        </button>
+            }}
+            className='w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors'
+          >
+            <Trash2 size={16} />
+            Delete Group
+          </button>
+        )}
+
+        {!selectedUser.isGroup && (
+          <button
+            onClick={async () => {
+              const isBlocked = authUser.blockedUsers.includes(selectedUser._id);
+              const action = isBlocked ? "unblock" : "block";
+
+              if (!window.confirm(`Are you sure you want to ${action} ${selectedUser.name}?`)) return;
+
+              try {
+                const { data } = await axios.put(`/api/messages/${action}/${selectedUser._id}`);
+                if (data.success) {
+                  // Update local state manually to reflect change immediately
+                  if (isBlocked) {
+                    setAuthUser(prev => ({
+                      ...prev,
+                      blockedUsers: prev.blockedUsers.filter(id => id !== selectedUser._id)
+                    }));
+                    alert("User unblocked successfully");
+                  } else {
+                    setAuthUser(prev => ({
+                      ...prev,
+                      blockedUsers: [...prev.blockedUsers, selectedUser._id]
+                    }));
+                    alert("User blocked successfully");
+                  }
+                }
+              } catch (error) {
+                console.error(error);
+                alert(`Failed to ${action} user`);
+              }
+            }}
+            className={`w-full py-2 rounded-lg flex items-center justify-center gap-2 transition-colors ${authUser?.blockedUsers?.includes(selectedUser._id)
+              ? 'bg-green-500/10 hover:bg-green-500/20 text-green-400'
+              : 'bg-stone-500/10 hover:bg-stone-500/20 text-stone-400'
+              }`}
+          >
+            <Ban size={16} />
+            {authUser?.blockedUsers?.includes(selectedUser._id) ? "Unblock User" : "Block User"}
+          </button>
+        )}
       </div>
 
       <div
@@ -131,4 +182,4 @@ const RightSideBar = ({ selectedUser }) => {
   )
 }
 
-export default RightSideBar
+export default RightSideBar;

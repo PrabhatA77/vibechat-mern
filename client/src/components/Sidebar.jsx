@@ -1,35 +1,50 @@
 import React, { useEffect, useState, useContext } from "react";
 import assets from "../assets/assets";
-import { MoreVertical, Search, Bot } from "lucide-react";
+import { MoreVertical, Search, Bot, Users, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthContext } from "../context/AuthContext.jsx";
+import CreateGroupModal from "./CreateGroupModal";
 
 const Sidebar = ({ selectedUser, setSelectedUser }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [users, setUsers] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [unseen, setUnseen] = useState({}); // {userId:count}
-  const { axios, onlineUsers, logout } = useContext(AuthContext);
+  const { axios, onlineUsers, logout, socket } = useContext(AuthContext);
 
   useEffect(() => {
-    // fetch users from backend
-    const fetchUsers = async () => {
+    // fetch users and groups
+    const fetchData = async () => {
       try {
-        const { data } = await axios.get("/api/messages/users");
-        if (data.success) {
-          setUsers(data.users);
-          setUnseen(data.unseenMessages || {});
+        const [usersRes, groupsRes] = await Promise.all([
+          axios.get("/api/messages/users"),
+          axios.get("/api/groups")
+        ]);
+
+        if (usersRes.data.success) {
+          setUsers(usersRes.data.users);
+          setUnseen(usersRes.data.unseenMessages || {});
+        }
+        if (groupsRes.data.success) {
+          setGroups(groupsRes.data.groups);
         }
       } catch (error) {
-        console.error("Failed to fetch users: ", error);
+        console.error("Failed to fetch data: ", error);
       }
     };
 
-    fetchUsers();
-    // you can re-fetch periodically or on socket onlineUsers change if needed
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchData();
+
+    if (socket) {
+      socket.on("newGroup", (newGroup) => {
+        setGroups(prev => [newGroup, ...prev]);
+      });
+      return () => socket.off("newGroup");
+    }
+  }, [socket, axios]);
 
   const isOnline = (userId) => onlineUsers?.includes(userId);
 
@@ -81,11 +96,23 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
                   <p onClick={logout} className="cursor-pointer text-sm hover:text-red-400">
                     Logout
                   </p>
+                  <hr className="my-2 border-t border-gray-500" />
+                  <p
+                    onClick={() => {
+                      setIsCreateGroupOpen(true);
+                      setIsMenuOpen(false);
+                    }}
+                    className="cursor-pointer text-sm hover:text-indigo-300 flex items-center gap-2"
+                  >
+                    <Plus size={14} /> Create Group
+                  </p>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         </div>
+
+        <CreateGroupModal isOpen={isCreateGroupOpen} onClose={() => setIsCreateGroupOpen(false)} />
 
         <div className="bg-[#282142] rounded-full flex items-center gap-2 py-3 px-4 mt-5">
           <Search className="w-5 h-5 text-gray-500" />
@@ -100,56 +127,88 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
             text-base 
             placeholder-[#c8c8c8] 
             border-none 
-            flex-1"
-            placeholder="Search User..."
+            flex-1 w-full"
+            placeholder="Search here..."
           />
         </div>
       </div>
 
-      <div className="flex flex-col">
-        {users.length > 0 ? (
-          users.map((user) => (
-            <div
-              onClick={() => setSelectedUser(user)}
-              key={user._id}
-              className={`relative flex items-center gap-2 p-2 pl-4 rounded cursor-pointer max-sm:text-sm
-    hover:bg-[#282142]/30 hover:scale-[1.02] transform transition-all duration-200
-    ${selectedUser?._id === user._id ? "bg-[#282142]/50" : ""}`}
-            >
-              <img
-                src={user?.profilePic || assets.avatar_icon}
-                alt=""
-                className="w-[45px] aspect-square rounded-full"
-              />
-              <div className="flex flex-col leading-5">
-                <p className="text-indigo-100 flex items-center gap-1">
-                  {user.name}
-                  {user.isAI && <Bot size={14} className="text-blue-400" />}
-                </p>
-                <span
-                  className={`text-xs ${isOnline(user._id) ? "text-green-300" : "text-neutral-400"
-                    }`}
-                >
-                  {isOnline(user._id) ? "Online" : "Offline"}
-                </span>
+      {/* GROUPS LIST */}
+      {groups.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs text-gray-400 mb-2 uppercase font-semibold tracking-wider">Groups</p>
+          <div className="flex flex-col gap-1">
+            {groups.map((group) => (
+              <div
+                key={group._id}
+                onClick={() => setSelectedUser({ ...group, isGroup: true })}
+                className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:bg-white/5 ${selectedUser?._id === group._id ? "bg-indigo-600/20 border border-indigo-500/30" : ""
+                  }`}
+              >
+                <div className="relative">
+                  <img
+                    src={group.profilePic || assets.avatar_icon}
+                    alt="group"
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  <div className="absolute -bottom-1 -right-1 bg-[#282142] rounded-full p-0.5">
+                    <Users size={12} className="text-indigo-400" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-0.5">
+                    <p className="font-medium truncate text-gray-100">{group.name}</p>
+                  </div>
+                  <p className="text-xs text-gray-400 truncate">
+                    {group.members.length} members
+                  </p>
+                </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-              {/* unseen messages count */}
-              {unseen[user._id] > 0 && (
-                <p className="absolute top-4 right-4 text-xs h-5 w-5 flex justify-center items-center rounded-full bg-indigo-500/80">
-                  {unseen[user._id]}
-                </p>
+      {/* USERS LIST */}
+      <p className="text-xs text-gray-400 mb-2 uppercase font-semibold tracking-wider">Direct Messages</p>
+      <div className="flex flex-col gap-1">
+        {users.map((user) => (
+          <div
+            key={user._id}
+            onClick={() => setSelectedUser(user)}
+            className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:bg-white/5 ${selectedUser?._id === user._id ? "bg-indigo-600/20 border border-indigo-500/30" : ""
+              }`}
+          >
+            <div className="relative">
+              <img
+                src={user.profilePic || assets.avatar_icon}
+                alt="profile"
+                className="w-10 h-10 rounded-full object-cover"
+              />
+              {isOnline(user._id) && (
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#282142]"></div>
               )}
             </div>
-          ))
-        ) : (
-          <div className="px-4 py-8">
-            <p className="text-center text-gray-400">
-              No other users found. Create another account in a separate browser
-              or device to start chatting.
-            </p>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center mb-0.5">
+                <p className="font-medium truncate text-gray-100 flex items-center gap-1">
+                  {user.name}
+                  {user.isAI && <Bot size={14} className="text-indigo-400" />}
+                </p>
+                {unseen[user._id] > 0 && (
+                  <span className="bg-indigo-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                    {unseen[user._id]}
+                  </span>
+                )}
+              </div>
+              <p className={`text-xs truncate ${unseen[user._id] > 0 ? "text-indigo-300 font-medium" : "text-gray-400"
+                }`}>
+                {user.isAI ? "AI Assistant" : (user.bio || "Available")}
+              </p>
+            </div>
           </div>
-        )}
+        ))}
       </div>
     </motion.div>
   );
